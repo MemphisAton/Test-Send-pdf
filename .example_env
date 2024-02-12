@@ -1,6 +1,6 @@
 SMTP_HOST=smtp.yandex.ru
 SMTP_USERNAME=test@yandex.ru
-SMTP_PASSWORD="izvfdsgffdvccyi"
+SMTP_PASSWORD="some_password"
 SMTP_PORT=587
 SMTP_ENCRYPTION=TLS
-TELEGRAM_BOT_TOKEN='120235409:AAFgS66dgdhybpqBAJCUbetjX7f54323wc'
+TELEGRAM_BOT_TOKEN='some_symbols'

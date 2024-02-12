@@ -77,11 +77,11 @@ if (isset($_SESSION['errors'])) {
 </form>
 <h2>Навигация</h2>
 <form action="edit.php" method="get">
-    <button type="submit">Редактировать базу данных</button><br>
+    <button type="submit">Редактировать базу данных</button><br><br>
 </form>
 
 <form action="send.php" method="get">
-    <button type="submit">Отправить PDF файл</button>
+    <button type="submit">Отправить PDF файл</button><br><br>
 </form>
 
 <?php if ($fileExists): ?>
