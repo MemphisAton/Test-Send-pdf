@@ -1,39 +1,56 @@
 <?php
 require 'db.php';
+session_start();
 
-$message = '';
-$id = isset($_GET['id']) ? (int) $_GET['id'] : null;
-$recipient = null;
+// Инициализация переменных
+$id = $_GET['id'] ?? null; // Получаем ID из URL
+$message = ''; // Сообщение для пользователя
+$recipient = ['fullname' => '', 'contact' => '']; // Пустой массив для данных получателя
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = $_POST['id'];
-    $fullname = $_POST['fullname'];
-    $contact = $_POST['contact'];
-
-    if ($id && !empty($fullname) && !empty($contact)) {
-        try {
-            $stmt = $pdo->prepare("UPDATE recipients SET fullname = ?, contact = ? WHERE id = ?");
-            if ($stmt->execute([$fullname, $contact, $id])) {
-                $message = "Данные получателя успешно обновлены!";
-            } else {
-                $message = "Не удалось обновить данные получателя.";
-            }
-        } catch (PDOException $e) {
-            $message = "Ошибка при обновлении данных в базе данных: " . $e->getMessage();
-        }
-    } else {
-        $message = "Пожалуйста, заполните все поля.";
-    }
-} else if ($id) {
+if ($id) {
+    // Загрузка данных получателя из базы данных
     $stmt = $pdo->prepare("SELECT * FROM recipients WHERE id = ?");
     $stmt->execute([$id]);
     $recipient = $stmt->fetch();
+
+    if (!$recipient) {
+        // Если получатель не найден, устанавливаем сообщение и возвращаемся к списку
+        $_SESSION['message'] = "Получатель с указанным ID не найден.";
+        header('Location: edit.php');
+        exit;
+    }
 }
 
-if (!$recipient) {
-    header('Location: edit.php');
-    exit;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Получение и очистка данных из формы
+    $fullname = trim($_POST['fullname']);
+    $contact = trim($_POST['contact']);
+
+    if (!empty($fullname) && !empty($contact)) {
+        // Валидация поля contact
+        if (filter_var($contact, FILTER_VALIDATE_EMAIL) || preg_match("/^\d{9,10}$/", $contact)) {
+            // Попытка обновить данные в базе данных
+            $stmt = $pdo->prepare("UPDATE recipients SET fullname = ?, contact = ? WHERE id = ?");
+            if ($stmt->execute([$fullname, $contact, $id])) {
+                // Обновление прошло успешно, устанавливаем сообщение
+                $_SESSION['message'] = "Данные получателя успешно обновлены!";
+                header('Location: edit.php');
+                exit;
+            } else {
+                // Произошла ошибка при обновлении
+                $message = "Не удалось обновить данные получателя.";
+            }
+        } else {
+            // Неверный формат контакта
+            $message = "Неверный формат контакта. Укажите действительную почту или Telegram ID.";
+        }
+    } else {
+        // Не все поля формы заполнены
+        $message = "Пожалуйста, заполните все поля.";
+    }
 }
+
+// HTML-форма будет здесь...
 ?>
 
 <!DOCTYPE html>
@@ -46,21 +63,26 @@ if (!$recipient) {
 
 <form action="edit.php">
     <button type="submit">Вернуться к списку</button>
+    <br>
+    <br>
 </form>
 
-<h2>Редактировать получателя</h2>
+<?php if (isset($_SESSION['message'])): ?>
+    <p><?= $_SESSION['message'] ?></p>
+    <?php unset($_SESSION['message']); // Очищаем сообщение из сессии после его показа ?>
+<?php endif; ?>
 
 <?php if ($message): ?>
     <p><?= $message ?></p>
 <?php endif; ?>
 
-<form action="edit_recipient.php" method="post">
-    <input type="hidden" name="id" value="<?= $recipient['id'] ?>">
+<form action="edit_recipient.php?id=<?= htmlspecialchars($id) ?>" method="post">
+    <input type="hidden" name="id" value="<?= htmlspecialchars($id) ?>">
     <label for="fullname">ФИО:</label>
     <input type="text" name="fullname" id="fullname" value="<?= htmlspecialchars($recipient['fullname']) ?>" required><br>
     <label for="contact">Email/ID Telegram:</label>
     <input type="text" name="contact" id="contact" value="<?= htmlspecialchars($recipient['contact']) ?>" required><br>
-    <input type="submit" value="Обновить" name="submit">
+    <input type="submit" value="Обновить">
 </form>
 
 

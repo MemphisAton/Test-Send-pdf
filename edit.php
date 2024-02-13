@@ -8,23 +8,38 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $contact = $_POST['contact'];
 
     if (!empty($fullname) && !empty($contact)) {
-        try {
-            $stmt = $pdo->prepare("INSERT INTO recipients (fullname, contact) VALUES (?, ?)");
-            if ($stmt->execute([$fullname, $contact])) {
-                $message = "Получатель успешно добавлен!";
-            } else {
-                $message = "Не удалось добавить получателя.";
+        if (filter_var($contact, FILTER_VALIDATE_EMAIL) || preg_match("/^@?[a-zA-Z0-9_]{5,}$/", $contact)) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO recipients (fullname, contact) VALUES (?, ?)");
+                if ($stmt->execute([$fullname, $contact])) {
+                    // Сохраняем сообщение об успехе в сессии
+                    $_SESSION['message'] = "Получатель успешно добавлен!";
+                    // Перенаправляем на ту же страницу с помощью GET-запроса
+                    header('Location: edit.php');
+                    exit;
+                } else {
+                    $message = "Не удалось добавить получателя.";
+                }
+            } catch (PDOException $e) {
+                $message = "Ошибка при добавлении в базу данных: " . $e->getMessage();
             }
-        } catch (PDOException $e) {
-            $message = "Ошибка при добавлении в базу данных: " . $e->getMessage();
+        } else {
+            $message = "Контакт должен быть действительной почтой или Telegram ID.";
         }
     } else {
         $message = "Пожалуйста, заполните все поля.";
     }
 }
 
+// Проверяем, есть ли сообщение в сессии и выводим его
+if (isset($_SESSION['message'])) {
+    $message = $_SESSION['message'];
+    unset($_SESSION['message']);
+}
+
 $recipients = $pdo->query("SELECT * FROM recipients")->fetchAll();
 ?>
+
 
 <!DOCTYPE html>
 <html lang="ru">

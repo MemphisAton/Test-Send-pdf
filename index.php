@@ -8,30 +8,40 @@ $fileExists = file_exists($path . $fixedFileName);
 if (isset($_FILES['pdfFile'])) {
     $errors = [];
     $extensions = ['pdf'];
+    $file_size = $_FILES['pdfFile']['size'];
     $file_tmp = $_FILES['pdfFile']['tmp_name'];
-    $fileNameParts = explode('.', $_FILES['pdfFile']['name']);
+    $file_name = $_FILES['pdfFile']['name'];
+    $fileNameParts = explode('.', $file_name);
     $file_ext = strtolower(end($fileNameParts));
 
-    if (!in_array($file_ext, $extensions)) {
-        $_SESSION['message'] = 'Расширение файла не поддерживается: ' . $_FILES['pdfFile']['name'];
-    } else {
+    // Проверка наличия файла
+    if ($file_name == '') {
+        $errors[] = 'Файл не выбран.';
+    }
+    // Проверка расширения файла
+    else if (!in_array($file_ext, $extensions)) {
+        $errors[] = 'Расширение файла не поддерживается: ' . $file_name;
+    }
+    // Проверка размера файла
+    else if ($file_size > 2097152) { // Размер в байтах (2MB)
+        $errors[] = 'Файл слишком велик.';
+    }
+
+    if (empty($errors)) {
         if (move_uploaded_file($file_tmp, $path . $fixedFileName)) {
             $_SESSION['message'] = 'Файл успешно загружен';
             $fileExists = true;
-            // Перенаправление после успешной загрузки файла
-            header('Location: index.php');
-            exit;
         } else {
-            $_SESSION['message'] = 'Произошла ошибка при перемещении загруженного файла';
+            $errors[] = 'Произошла ошибка при перемещении загруженного файла.';
         }
     }
 
-    // Если есть ошибки, перенаправляем и передаем сообщение об ошибке
-    if ($errors) {
+    if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
-        header('Location: index.php');
-        exit;
     }
+    // Перенаправление для избежания повторной отправки формы
+    header('Location: index.php');
+    exit;
 }
 
 // Обработка удаления файла
@@ -40,24 +50,24 @@ if (isset($_POST['delete'])) {
         unlink($path . $fixedFileName);
         $_SESSION['message'] = 'Файл был удален';
         $fileExists = false;
-        // Перенаправление после удаления файла
-        header('Location: index.php');
-        exit;
     }
+    // Перенаправление для избежания повторной отправки формы
+    header('Location: index.php');
+    exit;
 }
 
-// Выводим сообщение из сессии, если оно есть
+// Вывод сообщений из сессии
 if (isset($_SESSION['message'])) {
     echo "<script>alert('" . $_SESSION['message'] . "');</script>";
-    unset($_SESSION['message']); // Удаляем сообщение после показа
+    unset($_SESSION['message']);
 }
-
 if (isset($_SESSION['errors'])) {
     foreach ($_SESSION['errors'] as $error) {
         echo "<script>alert('{$error}');</script>";
     }
-    unset($_SESSION['errors']); // Удаляем ошибки после показа
+    unset($_SESSION['errors']);
 }
+
 ?>
 
 
